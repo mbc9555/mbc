@@ -1,0 +1,78 @@
+services:
+
+  init-reth:
+    image: ghcr.io/paradigmxyz/reth:latest
+    command:
+      - init
+      - --chain=/config/genesis.json
+      - --datadir=/execution-data
+
+    volumes:
+      - ./data/execution-data:/execution-data
+      - ./config/metadata:/config
+
+  reth:
+    image: ghcr.io/paradigmxyz/reth:latest
+    depends_on:
+      - init-reth
+    network_mode: "host"
+    command:
+      - node
+      - --chain=/config/genesis.json
+      - --datadir=/execution-data
+      - --authrpc.jwtsecret=/config/jwtsecret
+      - --authrpc.addr=0.0.0.0
+      - --authrpc.port=8551
+      - --http
+      - --http.api=all
+      - --http.addr=0.0.0.0
+      - --http.port=8545
+      - --http.corsdomain="*"
+      - --ws
+      - --ws.api=all
+      - --ws.addr=0.0.0.0
+      - --ws.port=8546
+      - --ws.origins="*"
+      - --bootnodes=enode://1dd6c82bdb98f7283683b7eff7f18e7fef14c1c05791c59c7a323ece6d266703d9de4c18abe36dfd305e3f661bb6053a214576ffe2ffdda943e5eb3b120b4ef7@159.69.82.182:30303
+      - --trusted-peers=enode://1dd6c82bdb98f7283683b7eff7f18e7fef14c1c05791c59c7a323ece6d266703d9de4c18abe36dfd305e3f661bb6053a214576ffe2ffdda943e5eb3b120b4ef7@159.69.82.182:30303
+
+    volumes:
+      - ./data/execution-data:/execution-data
+      - ./config/metadata:/config
+    restart: unless-stopped
+
+  beacon:
+    image:  sigp/lighthouse:latest-unstable
+    network_mode: "host"
+    command:
+      - lighthouse
+      - beacon_node
+      - --disable-peer-scoring
+      - --disable-packet-filter
+      - --enable-private-discovery
+      - --staking
+      - --http 
+      - --http-address=0.0.0.0
+      - --http-port=5052
+      - --validator-monitor-auto
+      - --http-allow-origin=*
+      - --listen-address=0.0.0.0
+      - --port=9000
+      - --target-peers=100
+      - --testnet-dir=/config
+      - --enr-address=${NODE_PUBLIC_IP}
+      - --enr-tcp-port=9000
+      - --enr-udp-port=9000
+      - --execution-endpoints=http://${NODE_PUBLIC_IP}:8551
+      - --jwt-secrets=/config/jwtsecret
+      - --suggested-fee-recipient=${FEE_RECIPIENT}
+      - --allow-insecure-genesis-sync
+      - --boot-nodes=enr:-OS4QKRTgKCsS_s37u3JtrheG-ls6LNo3LmxzCCH5CiXfrYcBkpWax2E8YVH10qHv-72yuLS_41a58lprcoqrAkCYhABh2F0dG5ldHOIAAAAAAAAAACGY2xpZW502IpMaWdodGhvdXNljDcuMC4wLWJldGEuNYRldGgykP2pNW9gAAA4__________-CaWSCdjSCaXCEn0VStoRxdWljgiMpiXNlY3AyNTZrMaEDtc3fU4L5uJvm25yAfIFC9A9YJyMrachc2DW2G3bBHROIc3luY25ldHMAg3RjcIIjKIN1ZHCCIyg
+    volumes:
+      - ./data/consensus-data:/root/.lighthouse
+      - ./data/lighthouse:/root/.lighthouse
+      - ./config/metadata:/config
+    depends_on:
+      - reth
+    restart: unless-stopped
+
