@@ -40,6 +40,11 @@ services:
       - ./data/execution-data:/execution-data
       - ./config/metadata:/config
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
 
   beacon:
     image:  sigp/lighthouse:latest-unstable
@@ -75,4 +80,9 @@ services:
     depends_on:
       - reth
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
 
